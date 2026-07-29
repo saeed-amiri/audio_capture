@@ -1,0 +1,83 @@
+services:
+  api:
+    build:
+      context: .
+      dockerfile: docker/api/Dockerfile
+    container_name: audio-capture-api
+    environment:
+      - CONFIG_FILE=/app/config/settings.yaml
+    volumes:
+      - ./data:/app/data
+      - ./config:/app/config:ro
+    ports:
+      - "8000:8000"
+
+  ui-streamlit:
+    build:
+      context: .
+      dockerfile: docker/ui-streamlit/Dockerfile
+    container_name: audio-capture-ui
+    depends_on:
+      - api
+    environment:
+      - CONFIG_FILE=/app/config/settings.yaml
+    volumes:
+      - ./data:/app/data
+      - ./config:/app/config:ro
+    ports:
+      - "8501:8501"
+
+  worker-discovery:
+    build:
+      context: .
+      dockerfile: docker/worker-discovery/Dockerfile
+    container_name: audio-capture-worker-discovery
+    environment:
+      - CONFIG_FILE=/app/config/settings.yaml
+    volumes:
+      - ./data:/app/data
+      - ./config:/app/config:ro
+
+  worker-download:
+    build:
+      context: .
+      dockerfile: docker/worker-download/Dockerfile
+    container_name: audio-capture-worker-download
+    environment:
+      - CONFIG_FILE=/app/config/settings.yaml
+    volumes:
+      - ./data:/app/data
+      - ./config:/app/config:ro
+
+  worker-convert:
+    build:
+      context: .
+      dockerfile: docker/worker-convert/Dockerfile
+    container_name: audio-capture-worker-convert
+    environment:
+      - CONFIG_FILE=/app/config/settings.yaml
+    volumes:
+      - ./data:/app/data
+      - ./config:/app/config:ro
+
+  worker-telegram-prep:
+    build:
+      context: .
+      dockerfile: docker/worker-telegram-prep/Dockerfile
+    container_name: audio-capture-worker-telegram-prep
+    environment:
+      - CONFIG_FILE=/app/config/settings.yaml
+    volumes:
+      - ./data:/app/data
+      - ./config:/app/config:ro
+
+  worker-transcript:
+    build:
+      context: .
+      dockerfile: docker/worker-transcript/Dockerfile
+    container_name: audio-capture-worker-transcript
+    environment:
+      - CONFIG_FILE=/app/config/settings.yaml
+    volumes:
+      - ./data:/app/data
+      - ./config:/app/config:ro
