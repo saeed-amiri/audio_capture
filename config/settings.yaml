@@ -1,0 +1,55 @@
+app:
+  name: audio-capture
+  environment: dev
+
+paths:
+  jobs_root: /app/data/jobs
+  cache_root: /app/data/shared/cache
+  temp_root: /app/data/shared/tmp
+
+source:
+  default_type: auto
+  supported_types:
+    - auto
+    - channel
+    - playlist
+    - single
+
+download:
+  max_workers: 8
+  retry_count: 3
+  retry_backoff_seconds: 5
+  continue_on_error: true
+  skip_if_exists: true
+  audio_format_selector: bestaudio
+  write_thumbnail: true
+  write_info_json: true
+  write_description: true
+  write_subtitles: true
+  subtitle_languages:
+    - de
+    - en
+
+conversion:
+  enabled: false
+  target_format: mp3
+  bitrate_kbps: 192
+  max_workers: 4
+
+naming:
+  item_folder_pattern: "{index:04d}__{video_id}__{safe_title}"
+  safe_title_max_length: 80
+  replace_whitespace_with: "_"
+
+transcript:
+  enabled: true
+  prefer_manual_subtitles: true
+  fallback_to_auto_subtitles: true
+  output_text_file: transcript.txt
+
+telegram:
+  enabled: false
+  caption_source_order:
+    - transcript
+    - description
+    - title

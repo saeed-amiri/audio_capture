@@ -1,0 +1,13 @@
+# Copy this file to settings.local.yaml and override only values you need.
+# Your services should load settings.local.yaml if present, else fallback to settings.yaml.
+
+download:
+  max_workers: 12
+  retry_count: 4
+
+conversion:
+  enabled: true
+  bitrate_kbps: 160
+
+paths:
+  jobs_root: /app/data/jobs
