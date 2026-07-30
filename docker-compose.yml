@@ -37,6 +37,7 @@ services:
     volumes:
       - ./data:/app/data
       - ./config:/app/config:ro
+    entrypoint: ["python", "/app/apps/worker-discovery/main.py"]
 
   worker-download:
     build:
