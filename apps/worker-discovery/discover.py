@@ -1,4 +1,5 @@
 import json
+import logging
 import re
 import sys
 import urllib.parse
@@ -20,6 +21,9 @@ if str(ROOT) not in sys.path:
 config_loader = import_module("config.config_loader")
 load_config = config_loader.load_config
 validate_required_mapping_fields = config_loader.validate_required_mapping_fields
+
+logging.basicConfig(level=logging.INFO, format="[%(levelname)s] %(message)s")
+LOGGER = logging.getLogger("discovery-worker")
 
 
 def detect_source_type(url: str) -> str:
@@ -215,6 +219,9 @@ def discover_from_url(
     source_type = detect_source_type(url)
     normalized_url = normalize_source_url(url)
 
+    LOGGER.info("Starting discovery for %s", normalized_url)
+    LOGGER.info("Detected source type: %s", source_type)
+
     if source_type == "single":
         video_id = "unknown"
         title = _get_video_title(normalized_url)
@@ -243,6 +250,7 @@ def discover_from_url(
 
     output = output_path or (ROOT / "data" / "jobs" / "discovery_manifest.json")
     create_manifest(items, output)
+    LOGGER.info("Created manifest with %d item(s) at %s", len(items), output)
 
     return {
         "source_type": source_type,

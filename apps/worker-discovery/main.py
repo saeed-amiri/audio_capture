@@ -1,8 +1,11 @@
 import argparse
 import json
+import logging
 from pathlib import Path
 
 from discover import discover_from_url
+
+logging.basicConfig(level=logging.INFO, format="[%(levelname)s] %(message)s")
 
 
 def main() -> None:
