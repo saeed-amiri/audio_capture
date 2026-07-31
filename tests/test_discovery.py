@@ -60,8 +60,8 @@ class DiscoveryHelpersTests(unittest.TestCase):
                     "https://www.youtube.com/watch?v=abc123",
                     output_path=output_path,
                 )
-            self.assertEqual(result["items"][0]["title"], "Actual_YouTube_Title")
-            self.assertIn("Actual_YouTube_Title", result["items"][0]["folder_name"])
+            self.assertEqual(result.items[0].title, "Actual_YouTube_Title")
+            self.assertIn("Actual_YouTube_Title", result.items[0].folder_name)
 
     def test_fetch_page_html_handles_explicit_lookup_errors(self):
         with patch("discover.urlopen", side_effect=ValueError("boom")):
