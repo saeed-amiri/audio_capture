@@ -1,0 +1,6 @@
+# Runtime dependencies for the download worker
+# Install with: pip install -r docker/worker-download/requirements.txt
+
+pydantic>=2.8.0
+PyYAML>=6.0
+yt-dlp>=2024.12.0

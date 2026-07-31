@@ -20,7 +20,7 @@ download:
   retry_count: 3
   retry_backoff_seconds: 5
   continue_on_error: true
-  skip_if_exists: true
+  overwrite_existing: false
   audio_format_selector: bestaudio
   write_thumbnail: true
   write_info_json: true

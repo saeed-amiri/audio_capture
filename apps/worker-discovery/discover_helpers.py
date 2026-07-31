@@ -40,6 +40,7 @@ class ManifestEntry(BaseModel):
     url: str = Field(min_length=1)
     folder_name: str = Field(min_length=1)
     source_type: SourceType
+    overwrite_existing: bool = False
 
     @field_validator("video_id", "title", "url", "folder_name")
     @classmethod
@@ -158,4 +159,7 @@ def build_manifest_entry(
             config=effective_config,
         ),
         source_type=normalized_source_type,
+        overwrite_existing=bool(
+            effective_config.get("download", {}).get("overwrite_existing", False)
+        ),
     )
