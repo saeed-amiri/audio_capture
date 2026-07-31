@@ -1,5 +1,4 @@
 import argparse
-import json
 import logging
 from pathlib import Path
 
@@ -20,7 +19,7 @@ def main() -> None:
 
     output_path = Path(args.output)
     result = discover_from_url(args.url, output_path=output_path)
-    print(json.dumps(result, indent=2, ensure_ascii=False))
+    print(result.model_dump_json(indent=2))
 
 
 if __name__ == "__main__":
