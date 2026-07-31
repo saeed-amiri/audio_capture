@@ -49,6 +49,7 @@ services:
     volumes:
       - ./data:/app/data
       - ./config:/app/config:ro
+    entrypoint: ["python", "/app/apps/worker-download/main.py"]
 
   worker-convert:
     build:
