@@ -5,6 +5,7 @@ from __future__ import annotations
 import re
 import sys
 from dataclasses import dataclass
+from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any, Literal
 
@@ -41,6 +42,9 @@ class ManifestEntry(BaseModel):
     folder_name: str = Field(min_length=1)
     source_type: SourceType
     overwrite_existing: bool = False
+    discovered_at: str = Field(
+        default_factory=lambda: datetime.now(UTC).isoformat()
+    )
 
     @field_validator("video_id", "title", "url", "folder_name")
     @classmethod
@@ -118,6 +122,29 @@ def build_item_folder_name(
 
 def normalize_source_url(url: str) -> str:
     return url.strip()
+
+
+_INDEX_PREFIX_PATTERN = re.compile(r"^(\d+)__")
+
+
+def find_next_index(jobs_dir: Path) -> int:
+    """Scan jobs_dir for existing item folders and return the next free index.
+
+    Existing folders are expected to start with a zero-padded index, as
+    produced by `build_item_folder_name` (e.g. "0001__abc123__My_Video").
+    """
+    if not jobs_dir.exists():
+        return 1
+
+    highest = 0
+    for entry in jobs_dir.iterdir():
+        if not entry.is_dir():
+            continue
+        match = _INDEX_PREFIX_PATTERN.match(entry.name)
+        if match:
+            highest = max(highest, int(match.group(1)))
+
+    return highest + 1
 
 
 _VALID_SOURCE_TYPES: frozenset[str] = frozenset(

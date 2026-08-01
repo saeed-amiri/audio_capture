@@ -62,6 +62,40 @@ class DiscoveryHelpersTests(unittest.TestCase):
                 )
             self.assertEqual(result.items[0].title, "Actual_YouTube_Title")
             self.assertIn("Actual_YouTube_Title", result.items[0].folder_name)
+            self.assertTrue(result.items[0].discovered_at)
+
+    def test_find_next_index_with_no_existing_folders(self):
+        with tempfile.TemporaryDirectory() as tmpdir:
+            self.assertEqual(discover.find_next_index(Path(tmpdir)), 1)
+
+    def test_find_next_index_with_missing_directory(self):
+        missing = Path(tempfile.mkdtemp()) / "does-not-exist"
+        self.assertEqual(discover.find_next_index(missing), 1)
+
+    def test_find_next_index_scans_existing_folders(self):
+        with tempfile.TemporaryDirectory() as tmpdir:
+            jobs_dir = Path(tmpdir)
+            (jobs_dir / "0001__abc__First").mkdir()
+            (jobs_dir / "0003__def__Third").mkdir()
+            (jobs_dir / "not_a_job_folder").mkdir()
+
+            self.assertEqual(discover.find_next_index(jobs_dir), 4)
+
+    def test_discover_from_url_continues_numbering_from_existing_folders(self):
+        with tempfile.TemporaryDirectory() as tmpdir:
+            jobs_dir = Path(tmpdir)
+            (jobs_dir / "0001__abc__First").mkdir()
+            (jobs_dir / "0002__def__Second").mkdir()
+            output_path = jobs_dir / "manifest.json"
+
+            with patch("discover._get_video_title", return_value="Third Video"):
+                result = discover.discover_from_url(
+                    "https://www.youtube.com/watch?v=ghi789",
+                    output_path=output_path,
+                )
+
+            self.assertEqual(result.items[0].index, 3)
+            self.assertTrue(result.items[0].folder_name.startswith("0003__"))
 
     def test_fetch_page_html_handles_explicit_lookup_errors(self):
         with patch("discover.urlopen", side_effect=ValueError("boom")):

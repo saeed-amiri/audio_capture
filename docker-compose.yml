@@ -61,6 +61,7 @@ services:
     volumes:
       - ./data:/app/data
       - ./config:/app/config:ro
+    entrypoint: ["python", "/app/apps/worker-convert/main.py"]
 
   worker-telegram-prep:
     build:

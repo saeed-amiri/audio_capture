@@ -8,6 +8,7 @@ download:
 conversion:
   enabled: true
   bitrate_kbps: 160
+  remove_original_format: false
 
 paths:
   jobs_root: /app/data/jobs
