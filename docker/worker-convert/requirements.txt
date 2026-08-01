@@ -1,0 +1,5 @@
+# Runtime dependencies for the convert worker
+# Install with: pip install -r docker/worker-convert/requirements.txt
+
+pydantic>=2.8.0
+PyYAML>=6.0

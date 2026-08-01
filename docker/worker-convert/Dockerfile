@@ -1,4 +1,19 @@
 FROM python:3.12-slim
+
+ENV PYTHONDONTWRITEBYTECODE=1 \
+	PYTHONUNBUFFERED=1
+
 WORKDIR /app
-COPY apps/worker-convert /app
-CMD ["python", "-c", "print('worker-convert placeholder')"]
+
+RUN apt-get update \
+	&& apt-get install -y --no-install-recommends ffmpeg \
+	&& rm -rf /var/lib/apt/lists/*
+
+COPY docker/worker-convert/requirements.txt /tmp/requirements.txt
+COPY apps/worker-convert /app/apps/worker-convert
+COPY config /app/config
+
+RUN pip install --no-cache-dir --upgrade pip \
+	&& pip install --no-cache-dir -r /tmp/requirements.txt
+
+CMD ["python", "/app/apps/worker-convert/main.py"]

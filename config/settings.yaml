@@ -31,9 +31,10 @@ download:
     - en
 
 conversion:
-  enabled: false
+  enabled: true
   target_format: mp3
   bitrate_kbps: 192
+  remove_original_format: false
   max_workers: 4
 
 naming:

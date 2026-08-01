@@ -28,6 +28,12 @@ download:
   write_description: true
   write_subtitles: true
   subtitle_languages: [de, en]
+
+conversion:
+  enabled: false
+  target_format: mp3
+  bitrate_kbps: 192
+  remove_original_format: false  # if true, delete source audio after successful conversion
 ```
 
 ## worker-discovery
@@ -93,11 +99,48 @@ Pass `--output-dir /app/data/jobs` to change where items are downloaded to
 docker compose run --rm worker-download /app/data/jobs/discovery_manifest.json
 ```
 
+## worker-convert
+
+Reads a discovery manifest and converts each downloaded item's source audio
+inside the same item folder (`data/jobs/<folder_name>/`) into the configured
+target format.
+
+By default, the source audio file is kept. Set
+`conversion.remove_original_format: true` to delete the source file after a
+successful conversion.
+
+Source: [apps/worker-convert](apps/worker-convert)
+
+### Run with Docker directly
+
+```bash
+docker build -f docker/worker-convert/Dockerfile -t audio-capture-convert .
+
+docker run --rm \
+  -v "$(pwd)/data:/app/data" \
+  -v "$(pwd)/config:/app/config:ro" \
+  -e CONFIG_FILE=/app/config/settings.yaml \
+  audio-capture-convert \
+  python /app/apps/worker-convert/main.py /app/data/jobs/discovery_manifest.json
+```
+
+Pass `--output-dir /app/data/jobs` to point at a different jobs directory.
+By default, worker-convert also writes a summary JSON file to
+`<output-dir>/conversion_manifest.json`.
+Override this with `--manifest-output /app/data/jobs/my_conversion_manifest.json`.
+
+### Run with Docker Compose
+
+```bash
+docker compose run --rm worker-convert /app/data/jobs/discovery_manifest.json
+```
+
 ## Typical end-to-end flow
 
 ```bash
 docker compose run --rm worker-discovery "https://www.youtube.com/watch?v=VIDEO_ID"
 docker compose run --rm worker-download /app/data/jobs/discovery_manifest.json
+docker compose run --rm worker-convert /app/data/jobs/discovery_manifest.json
 ```
 
 ## Local development (without Docker)
@@ -106,6 +149,7 @@ docker compose run --rm worker-download /app/data/jobs/discovery_manifest.json
 uv sync
 uv run python apps/worker-discovery/main.py "https://www.youtube.com/watch?v=VIDEO_ID"
 uv run python apps/worker-download/main.py data/jobs/discovery_manifest.json
+uv run python apps/worker-convert/main.py data/jobs/discovery_manifest.json
 uv run pytest -q tests/
 uv run ruff check .
 ```
