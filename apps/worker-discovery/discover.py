@@ -2,12 +2,17 @@
 
 Flow:
 1. `detect_source_type` classifies the URL as single/search/playlist/channel.
-2. For "single"/"search" URLs, the real title is resolved via yt-dlp, falling
+2. `find_next_index` scans the manifest's output directory for existing item
+   folders (named "<index>__<video_id>__<title>") and picks the next free
+   index, so folders created across separate discovery runs stay ordered
+   and never collide.
+3. For "single"/"search" URLs, the real title is resolved via yt-dlp, falling
    back to scraping the page HTML if yt-dlp is unavailable or fails.
-3. `build_manifest_entry` turns each resolved (or placeholder) item into a
-   validated `ManifestEntry`, using `config/settings.yaml` naming rules.
-4. `create_manifest` writes the entries to a JSON manifest file on disk.
-5. `discover_from_url` ties the above together and returns a `DiscoveryResult`
+4. `build_manifest_entry` turns each resolved (or placeholder) item into a
+   validated `ManifestEntry` (including a `discovered_at` timestamp), using
+   `config/settings.yaml` naming rules.
+5. `create_manifest` writes the entries to a JSON manifest file on disk.
+6. `discover_from_url` ties the above together and returns a `DiscoveryResult`
    summarizing the source type, URL, items, and manifest path.
 """
 
@@ -26,6 +31,7 @@ from discover_helpers import (
     ManifestEntry,
     build_item_folder_name,
     build_manifest_entry,
+    find_next_index,
     normalize_source_type,
     normalize_source_url,
     sanitize_title,
@@ -170,30 +176,34 @@ def create_manifest(items: list[ManifestEntry], output_path: Path) -> Path:
     return output_path
 
 
-def _build_single_video_items(url: str, config: dict[str, Any]) -> list[ManifestEntry]:
+def _build_single_video_items(
+    index: int, url: str, config: dict[str, Any]
+) -> list[ManifestEntry]:
     title = sanitize_title(_get_video_title(url), config=config)
     return [
         build_manifest_entry(
-            1, "unknown", title, url, config=config, source_type="single"
+            index, "unknown", title, url, config=config, source_type="single"
         )
     ]
 
 
-def _build_search_result_items(url: str, config: dict[str, Any]) -> list[ManifestEntry]:
+def _build_search_result_items(
+    index: int, url: str, config: dict[str, Any]
+) -> list[ManifestEntry]:
     title = sanitize_title(_get_search_result_title(url), config=config)
     return [
         build_manifest_entry(
-            1, "unknown", title, url, config=config, source_type="search"
+            index, "unknown", title, url, config=config, source_type="search"
         )
     ]
 
 
 def _build_placeholder_items(
-    url: str, source_type: str, config: dict[str, Any]
+    index: int, url: str, source_type: str, config: dict[str, Any]
 ) -> list[ManifestEntry]:
     return [
         build_manifest_entry(
-            1,
+            index,
             "unknown",
             "placeholder_title",
             url,
@@ -204,13 +214,13 @@ def _build_placeholder_items(
 
 
 def _build_items_for_source(
-    source_type: str, url: str, config: dict[str, Any]
+    source_type: str, url: str, config: dict[str, Any], index: int
 ) -> list[ManifestEntry]:
     if source_type == "single":
-        return _build_single_video_items(url, config)
+        return _build_single_video_items(index, url, config)
     if source_type == "search":
-        return _build_search_result_items(url, config)
-    return _build_placeholder_items(url, source_type, config)
+        return _build_search_result_items(index, url, config)
+    return _build_placeholder_items(index, url, source_type, config)
 
 
 def discover_from_url(
@@ -225,9 +235,14 @@ def discover_from_url(
     LOGGER.info("Starting discovery for %s", normalized_url)
     LOGGER.info("Detected source type: %s", source_type)
 
-    items = _build_items_for_source(source_type, normalized_url, effective_config)
-
     output = output_path or (ROOT / "data" / "jobs" / "discovery_manifest.json")
+    start_index = find_next_index(output.parent)
+    LOGGER.info("Next available item index: %d", start_index)
+
+    items = _build_items_for_source(
+        source_type, normalized_url, effective_config, start_index
+    )
+
     create_manifest(items, output)
     LOGGER.info("Created manifest with %d item(s) at %s", len(items), output)
 
