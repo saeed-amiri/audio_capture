@@ -7,7 +7,7 @@ services:
     environment:
       - CONFIG_FILE=/app/config/settings.yaml
     volumes:
-      - ./data:/app/data
+      - ./data:/app/data:rw
       - ./config:/app/config:ro
     ports:
       - "8000:8000"
@@ -22,7 +22,7 @@ services:
     environment:
       - CONFIG_FILE=/app/config/settings.yaml
     volumes:
-      - ./data:/app/data
+      - ./data:/app/data:rw
       - ./config:/app/config:ro
     ports:
       - "8501:8501"
@@ -35,7 +35,7 @@ services:
     environment:
       - CONFIG_FILE=/app/config/settings.yaml
     volumes:
-      - ./data:/app/data
+      - ./data:/app/data:rw
       - ./config:/app/config:ro
     entrypoint: ["python", "/app/apps/worker-discovery/main.py"]
 
@@ -47,7 +47,7 @@ services:
     environment:
       - CONFIG_FILE=/app/config/settings.yaml
     volumes:
-      - ./data:/app/data
+      - ./data:/app/data:rw
       - ./config:/app/config:ro
     entrypoint: ["python", "/app/apps/worker-download/main.py"]
 
@@ -59,7 +59,7 @@ services:
     environment:
       - CONFIG_FILE=/app/config/settings.yaml
     volumes:
-      - ./data:/app/data
+      - ./data:/app/data:rw
       - ./config:/app/config:ro
     entrypoint: ["python", "/app/apps/worker-convert/main.py"]
 
@@ -71,7 +71,7 @@ services:
     environment:
       - CONFIG_FILE=/app/config/settings.yaml
     volumes:
-      - ./data:/app/data
+      - ./data:/app/data:rw
       - ./config:/app/config:ro
 
   worker-transcript:
@@ -82,5 +82,6 @@ services:
     environment:
       - CONFIG_FILE=/app/config/settings.yaml
     volumes:
-      - ./data:/app/data
+      - ./data:/app/data:rw
       - ./config:/app/config:ro
+    entrypoint: ["python", "/app/apps/worker-transcript/main.py"]

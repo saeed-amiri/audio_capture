@@ -3,6 +3,8 @@
 *.webm
 *.webp
 *.description
+*.vtt
+*.txt
 *.opus
 # Byte-compiled / optimized / DLL files
 __pycache__/

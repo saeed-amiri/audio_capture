@@ -34,6 +34,12 @@ conversion:
   target_format: mp3
   bitrate_kbps: 192
   remove_original_format: false  # if true, delete source audio after successful conversion
+
+transcript:
+  enabled: true
+  prefer_manual_subtitles: true
+  fallback_to_auto_subtitles: true
+  output_text_file: transcript.txt
 ```
 
 ## worker-discovery
@@ -135,12 +141,52 @@ Override this with `--manifest-output /app/data/jobs/my_conversion_manifest.json
 docker compose run --rm worker-convert /app/data/jobs/discovery_manifest.json
 ```
 
+## worker-transcript
+
+Reads a conversion manifest and produces a transcript file for each item folder.
+For each item it looks for:
+
+1. an existing transcript file (already transcribed, skipped)
+2. existing subtitle files in the item folder (`.vtt`, `.srt`, `.txt`), written into the
+   transcript file as-is
+3. otherwise, it fetches captions directly from the item's source URL via yt-dlp:
+   manual subtitles first (if `transcript.prefer_manual_subtitles` is enabled), then
+   auto-generated captions as a fallback (if `transcript.fallback_to_auto_subtitles` is
+   enabled), using `download.subtitle_languages` for the language preference
+
+The worker writes a summary JSON file to `<output-dir>/transcript_manifest.json`.
+
+Source: [apps/worker-transcript](apps/worker-transcript)
+
+### Run with Docker directly
+
+```bash
+docker build -f docker/worker-transcript/Dockerfile -t audio-capture-transcript .
+
+docker run --rm \
+  -v "$(pwd)/data:/app/data" \
+  -v "$(pwd)/config:/app/config:ro" \
+  -e CONFIG_FILE=/app/config/settings.yaml \
+  audio-capture-transcript \
+  python /app/apps/worker-transcript/main.py /app/data/jobs/conversion_manifest.json
+```
+
+Pass `--output-dir /app/data/jobs` to point at a different jobs directory.
+Override the output manifest with `--manifest-output /app/data/jobs/my_transcript_manifest.json`.
+
+### Run with Docker Compose
+
+```bash
+docker compose run --rm worker-transcript /app/data/jobs/conversion_manifest.json
+```
+
 ## Typical end-to-end flow
 
 ```bash
 docker compose run --rm worker-discovery "https://www.youtube.com/watch?v=VIDEO_ID"
 docker compose run --rm worker-download /app/data/jobs/discovery_manifest.json
 docker compose run --rm worker-convert /app/data/jobs/discovery_manifest.json
+docker compose run --rm worker-transcript /app/data/jobs/conversion_manifest.json
 ```
 
 ## Local development (without Docker)
@@ -149,7 +195,8 @@ docker compose run --rm worker-convert /app/data/jobs/discovery_manifest.json
 uv sync
 uv run python apps/worker-discovery/main.py "https://www.youtube.com/watch?v=VIDEO_ID"
 uv run python apps/worker-download/main.py data/jobs/discovery_manifest.json
-uv run python apps/worker-convert/main.py data/jobs/discovery_manifest.json
+uv run python apps/worker-convert/main.py data/jobs/conversion_manifest.json
+uv run python apps/worker-transcript/main.py data/jobs/conversion_manifest.json
 uv run pytest -q tests/
 uv run ruff check .
 ```
