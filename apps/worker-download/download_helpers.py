@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import re
 import shutil
 import sys
 from dataclasses import dataclass
@@ -81,6 +82,22 @@ def build_item_output_dir(output_dir: Path, folder_name: str) -> Path:
     return output_dir / folder_name
 
 
+def sanitize_output_stem(title: str) -> str:
+    cleaned = title.strip()
+    cleaned = cleaned.replace("ß", "ss")
+    cleaned = cleaned.replace("ä", "a")
+    cleaned = cleaned.replace("ö", "o")
+    cleaned = cleaned.replace("ü", "u")
+    cleaned = cleaned.replace("Ä", "A")
+    cleaned = cleaned.replace("Ö", "O")
+    cleaned = cleaned.replace("Ü", "U")
+    cleaned = cleaned.replace("ï", "i")
+    cleaned = cleaned.replace("ë", "e")
+    cleaned = re.sub(r"[^A-Za-z0-9]+", "_", cleaned)
+    cleaned = re.sub(r"_+", "_", cleaned).strip("_")
+    return cleaned or "untitled"
+
+
 def build_yt_dlp_download_options(
     item_output_dir: Path, config: dict[str, Any] | None = None
 ) -> Any:
@@ -88,7 +105,7 @@ def build_yt_dlp_download_options(
     download_cfg = effective_config.get("download", {})
     return {
         "format": download_cfg.get("audio_format_selector", "bestaudio"),
-        "outtmpl": str(item_output_dir / "%(title)s.%(ext)s"),
+        "outtmpl": str(item_output_dir / f"%(title)s.%(ext)s"),
         "writethumbnail": download_cfg.get("write_thumbnail", True),
         "writeinfojson": download_cfg.get("write_info_json", True),
         "writedescription": download_cfg.get("write_description", True),

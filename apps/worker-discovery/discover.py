@@ -169,6 +169,33 @@ def _get_search_result_title(url: str) -> str:
     return "unknown"
 
 
+def _get_playlist_items(url: str) -> dict[str, Any] | None:
+    if yt_dlp is not None:
+        try:
+            with yt_dlp.YoutubeDL(_build_yt_dlp_options(extract_flat=True)) as downloader:
+                info = downloader.extract_info(url, download=False)
+        except (ValueError, TypeError, KeyError):
+            info = None
+        else:
+            if isinstance(info, dict):
+                entries = info.get("entries") or []
+                if isinstance(entries, list):
+                    return {
+                        "title": info.get("title") or "playlist",
+                        "entries": [
+                            {
+                                "id": entry.get("id") if isinstance(entry, dict) else None,
+                                "title": entry.get("title") if isinstance(entry, dict) else None,
+                                "url": entry.get("url") if isinstance(entry, dict) else None,
+                            }
+                            for entry in entries
+                            if isinstance(entry, dict)
+                        ],
+                    }
+
+    return None
+
+
 def create_manifest(items: list[ManifestEntry], output_path: Path) -> Path:
     output_path.parent.mkdir(parents=True, exist_ok=True)
     with output_path.open("w", encoding="utf-8") as handle:
@@ -198,6 +225,74 @@ def _build_search_result_items(
     ]
 
 
+def _build_playlist_items(index: int, url: str, config: dict[str, Any]) -> list[ManifestEntry]:
+    playlist_info = _get_playlist_items(url)
+    if not isinstance(playlist_info, dict):
+        return _build_placeholder_items(index, url, "playlist", config)
+
+    playlist_title = str(playlist_info.get("title") or "playlist").strip() or "playlist"
+    safe_playlist_title = sanitize_title(playlist_title, config=config)
+    entries = playlist_info.get("entries") or []
+    if not isinstance(entries, list):
+        return _build_placeholder_items(index, url, "playlist", config)
+
+    items: list[ManifestEntry] = []
+    for offset, entry in enumerate(entries, start=1):
+        if not isinstance(entry, dict):
+            continue
+        video_id = str(entry.get("id") or entry.get("video_id") or "unknown")
+        title = str(entry.get("title") or "untitled")
+        entry_url = str(entry.get("url") or url)
+        entry_index = index + offset - 1
+        entry_folder_name = f"{safe_playlist_title}/{build_item_folder_name(entry_index, video_id, title, config=config)}"
+        item = build_manifest_entry(
+            entry_index,
+            video_id,
+            title,
+            entry_url,
+            config=config,
+            source_type="playlist",
+        )
+        item.folder_name = entry_folder_name
+        items.append(item)
+
+    return items or _build_placeholder_items(index, url, "playlist", config)
+
+
+def _build_channel_items(index: int, url: str, config: dict[str, Any]) -> list[ManifestEntry]:
+    channel_info = _get_playlist_items(url)
+    if not isinstance(channel_info, dict):
+        return _build_placeholder_items(index, url, "channel", config)
+
+    channel_title = str(channel_info.get("title") or "channel").strip() or "channel"
+    safe_channel_title = sanitize_title(channel_title, config=config)
+    entries = channel_info.get("entries") or []
+    if not isinstance(entries, list):
+        return _build_placeholder_items(index, url, "channel", config)
+
+    items: list[ManifestEntry] = []
+    for offset, entry in enumerate(entries, start=1):
+        if not isinstance(entry, dict):
+            continue
+        video_id = str(entry.get("id") or entry.get("video_id") or "unknown")
+        title = str(entry.get("title") or "untitled")
+        entry_url = str(entry.get("url") or url)
+        entry_index = index + offset - 1
+        entry_folder_name = f"{safe_channel_title}/{build_item_folder_name(entry_index, video_id, title, config=config)}"
+        item = build_manifest_entry(
+            entry_index,
+            video_id,
+            title,
+            entry_url,
+            config=config,
+            source_type="channel",
+        )
+        item.folder_name = entry_folder_name
+        items.append(item)
+
+    return items or _build_placeholder_items(index, url, "channel", config)
+
+
 def _build_placeholder_items(
     index: int, url: str, source_type: str, config: dict[str, Any]
 ) -> list[ManifestEntry]:
@@ -220,6 +315,10 @@ def _build_items_for_source(
         return _build_single_video_items(index, url, config)
     if source_type == "search":
         return _build_search_result_items(index, url, config)
+    if source_type == "playlist":
+        return _build_playlist_items(index, url, config)
+    if source_type == "channel":
+        return _build_channel_items(index, url, config)
     return _build_placeholder_items(index, url, source_type, config)
 
 

@@ -109,12 +109,11 @@ def build_item_folder_name(
         Path("config/settings.yaml"),
     )
     naming = effective_config.get("naming", {})
-    pattern = naming.get("item_folder_pattern", "{index:04d}__{video_id}__{safe_title}")
+    pattern = naming.get("item_folder_pattern", "{index:04d}__{safe_title}")
     safe_title = sanitize_title(title, config=effective_config)
     safe_title = safe_title[: naming.get("safe_title_max_length", 80)]
     return pattern.format(
         index=index,
-        video_id=video_id,
         safe_title=safe_title,
         title=title,
     )

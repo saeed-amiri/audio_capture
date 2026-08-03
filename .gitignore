@@ -2,14 +2,20 @@
 *.mp3
 *.webm
 *.webp
+*.jpg
+*.jpeg
+*.png
+*.part
 *.description
 *.vtt
 *.txt
+!reuirements.txt
 *.opus
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[codz]
 *$py.class
+
 
 # C extensions
 *.so

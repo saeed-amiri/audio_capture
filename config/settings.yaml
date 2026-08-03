@@ -38,7 +38,7 @@ conversion:
   max_workers: 4
 
 naming:
-  item_folder_pattern: "{index:04d}__{video_id}__{safe_title}"
+  item_folder_pattern: "{index:04d}__{safe_title}"
   safe_title_max_length: 80
   replace_whitespace_with: "_"
 
