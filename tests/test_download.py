@@ -152,6 +152,32 @@ class DownloadHelpersTests(unittest.TestCase):
             self.assertEqual(result.items[0].status, "failed")
             self.assertIn("boom", result.items[0].error)
 
+    def test_download_from_manifest_uses_sanitized_file_stems(self):
+        with tempfile.TemporaryDirectory() as tmpdir:
+            manifest_path = Path(tmpdir) / "manifest.json"
+            items = [
+                {
+                    "index": 1,
+                    "video_id": "unknown",
+                    "title": "My/Video: Hörspiel!",
+                    "url": "https://www.youtube.com/watch?v=abc123",
+                    "folder_name": "0001__unknown__My_Video",
+                    "source_type": "single",
+                    "overwrite_existing": False,
+                }
+            ]
+            manifest_path.write_text(json.dumps(items), encoding="utf-8")
+            output_dir = Path(tmpdir) / "jobs"
+
+            config = {"download": {"retry_count": 1, "retry_backoff_seconds": 0}}
+            with patch.object(download, "yt_dlp", _make_fake_yt_dlp()):
+                result = download.download_from_manifest(
+                    manifest_path, output_dir=output_dir, config=config
+                )
+
+            self.assertEqual(result.items[0].status, "downloaded")
+            self.assertTrue((output_dir / "0001__unknown__My_Video" / "My_Video_Horspiel.mp3").exists())
+
     def test_download_from_manifest_without_yt_dlp_fails(self):
         with tempfile.TemporaryDirectory() as tmpdir:
             manifest_path = Path(tmpdir) / "manifest.json"

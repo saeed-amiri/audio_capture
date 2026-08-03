@@ -31,6 +31,7 @@ from download_helpers import (
     clear_existing_output_dir,
     item_already_downloaded,
     load_manifest,
+    sanitize_output_stem,
 )
 
 __all__ = [
@@ -150,7 +151,9 @@ def _download_single_item(
         return _fail_item(item, item_output_dir, "yt-dlp is not installed")
 
     item_output_dir.mkdir(parents=True, exist_ok=True)
+    safe_stem = sanitize_output_stem(item["title"])
     options = build_yt_dlp_download_options(item_output_dir, config)
+    options["outtmpl"] = str(item_output_dir / f"{safe_stem}.%(ext)s")
     error = _download_with_retries(
         item["url"],
         options,

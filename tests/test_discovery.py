@@ -101,6 +101,66 @@ class DiscoveryHelpersTests(unittest.TestCase):
         with patch("discover.urlopen", side_effect=ValueError("boom")):
             self.assertIsNone(discover._fetch_page_html("https://example.com"))
 
+    def test_discover_from_url_expands_playlist_into_parent_and_child_folders(self):
+        with tempfile.TemporaryDirectory() as tmpdir:
+            output_path = Path(tmpdir) / "manifest.json"
+            playlist_info = {
+                "title": "My Playlist",
+                "entries": [
+                    {"id": "vid1", "title": "First Video", "url": "https://youtu.be/vid1"},
+                    {"id": "vid2", "title": "Second Video", "url": "https://youtu.be/vid2"},
+                ],
+            }
+            with patch(
+                "discover._get_playlist_items",
+                create=True,
+                return_value=playlist_info,
+            ):
+                result = discover.discover_from_url(
+                    "https://www.youtube.com/playlist?list=abc123",
+                    output_path=output_path,
+                )
+
+            self.assertEqual(len(result.items), 2)
+            self.assertEqual(
+                result.items[0].folder_name,
+                "My_Playlist/0001__vid1__First_Video",
+            )
+            self.assertEqual(
+                result.items[1].folder_name,
+                "My_Playlist/0002__vid2__Second_Video",
+            )
+
+    def test_discover_from_url_expands_channel_into_parent_and_child_folders(self):
+        with tempfile.TemporaryDirectory() as tmpdir:
+            output_path = Path(tmpdir) / "manifest.json"
+            channel_info = {
+                "title": "My Channel",
+                "entries": [
+                    {"id": "vid1", "title": "First Video", "url": "https://youtu.be/vid1"},
+                    {"id": "vid2", "title": "Second Video", "url": "https://youtu.be/vid2"},
+                ],
+            }
+            with patch(
+                "discover._get_playlist_items",
+                create=True,
+                return_value=channel_info,
+            ):
+                result = discover.discover_from_url(
+                    "https://www.youtube.com/@my-channel",
+                    output_path=output_path,
+                )
+
+            self.assertEqual(len(result.items), 2)
+            self.assertEqual(
+                result.items[0].folder_name,
+                "My_Channel/0001__vid1__First_Video",
+            )
+            self.assertEqual(
+                result.items[1].folder_name,
+                "My_Channel/0002__vid2__Second_Video",
+            )
+
     def test_build_item_folder_name_uses_config(self):
         with tempfile.TemporaryDirectory() as tmpdir:
             config_path = Path(tmpdir) / "settings.yaml"
