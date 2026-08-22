@@ -2,6 +2,7 @@ import importlib
 import json
 import sys
 import tempfile
+import time
 import unittest
 from pathlib import Path
 from unittest.mock import patch
@@ -219,6 +220,93 @@ class ConvertWorkerTests(unittest.TestCase):
             self.assertEqual(result.items[0].status, "converted")
             self.assertFalse(spaced_input.exists())
             self.assertTrue((item_dir / "Audio_File_Name.webm").exists())
+
+    def test_convert_skips_when_no_convertible_audio_file_exists(self):
+        with tempfile.TemporaryDirectory() as tmpdir:
+            jobs_dir = Path(tmpdir) / "jobs"
+            item_dir = jobs_dir / "0001__unknown__My_Video"
+            item_dir.mkdir(parents=True)
+
+            manifest_path = Path(tmpdir) / "manifest.json"
+            _write_manifest(manifest_path, folder_name=item_dir.name)
+
+            config = {
+                "conversion": {
+                    "enabled": True,
+                    "target_format": "mp3",
+                    "bitrate_kbps": 192,
+                    "max_workers": 2,
+                }
+            }
+            result = convert.convert_from_manifest(
+                manifest_path,
+                output_dir=jobs_dir,
+                config=config,
+            )
+
+            self.assertEqual(result.items[0].status, "skipped")
+
+    def test_convert_uses_configured_max_workers(self):
+        with tempfile.TemporaryDirectory() as tmpdir:
+            jobs_dir = Path(tmpdir) / "jobs"
+            manifest_path = Path(tmpdir) / "manifest.json"
+            items = []
+            for index in range(1, 4):
+                folder_name = f"{index:04d}__unknown__My_Video_{index}"
+                item_dir = jobs_dir / folder_name
+                item_dir.mkdir(parents=True)
+                (item_dir / "audio.webm").write_text("raw", encoding="utf-8")
+                items.append(
+                    {
+                        "index": index,
+                        "video_id": "unknown",
+                        "title": f"My_Video_{index}",
+                        "url": f"https://www.youtube.com/watch?v=abc{index}",
+                        "folder_name": folder_name,
+                        "source_type": "single",
+                    }
+                )
+
+            manifest_path.write_text(json.dumps(items), encoding="utf-8")
+
+            def _fake_run_ffmpeg(command: list[str]) -> tuple[int, str]:
+                time.sleep(0.01)
+                Path(command[-1]).write_text("converted", encoding="utf-8")
+                return 0, ""
+
+            config = {
+                "conversion": {
+                    "enabled": True,
+                    "target_format": "mp3",
+                    "bitrate_kbps": 192,
+                    "max_workers": 2,
+                }
+            }
+            captured_max_workers: list[int] = []
+
+            class _CapturingExecutor:
+                def __init__(self, max_workers: int):
+                    captured_max_workers.append(max_workers)
+
+                def __enter__(self):
+                    return self
+
+                def __exit__(self, exc_type, exc, tb):
+                    return False
+
+                def map(self, func, iterable):
+                    return [func(item) for item in iterable]
+
+            with patch.object(convert, "_run_ffmpeg", side_effect=_fake_run_ffmpeg):
+                with patch.object(convert, "ThreadPoolExecutor", _CapturingExecutor):
+                    result = convert.convert_from_manifest(
+                        manifest_path,
+                        output_dir=jobs_dir,
+                        config=config,
+                    )
+
+            self.assertEqual(captured_max_workers, [2])
+            self.assertEqual([item.status for item in result.items], ["converted", "converted", "converted"])
 
     def test_create_conversion_manifest_writes_file(self):
         with tempfile.TemporaryDirectory() as tmpdir:

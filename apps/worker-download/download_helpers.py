@@ -113,6 +113,8 @@ def build_yt_dlp_download_options(
         "subtitleslangs": download_cfg.get("subtitle_languages", []),
         "quiet": True,
         "no_warnings": True,
+        # node is installed in the image but yt-dlp only enables deno by default
+        "js_runtimes": {"node": {}},
     }
 
 

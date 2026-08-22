@@ -104,6 +104,8 @@ def _build_yt_dlp_options(*, extract_flat: bool = False) -> Any:
         "quiet": True,
         "skip_download": True,
         "no_warnings": True,
+        # node is installed in the image but yt-dlp only enables deno by default
+        "js_runtimes": {"node": {}},
     }
     if extract_flat:
         options["extract_flat"] = True
