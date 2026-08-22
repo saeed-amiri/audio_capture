@@ -34,7 +34,7 @@ conversion:
   enabled: true
   target_format: mp3
   bitrate_kbps: 192
-  remove_original_format: false
+  remove_original_format: true
   max_workers: 4
 
 naming:

@@ -17,8 +17,10 @@ Flow:
 
 from __future__ import annotations
 
+from concurrent.futures import ThreadPoolExecutor
 import json
 import logging
+import os
 import subprocess
 import sys
 from pathlib import Path
@@ -160,15 +162,13 @@ def _convert_single_item(
         return _skip_item(item, existing_target, existing_target)
 
     if input_path is None:
-        return _fail_item(
-            item,
-            item_output_dir,
-            (
-                "No convertible audio source file found in "
-                f"{item_output_dir} for target format "
-                f"'{conversion_input.target_format}'"
-            ),
+        message = (
+            "No convertible audio source file found in "
+            f"{item_output_dir} for target format "
+            f"'{conversion_input.target_format}', skipping"
         )
+        LOGGER.warning(message)
+        return _skip_item(item, item_output_dir, item_output_dir)
 
     output_path = _build_target_file_path(
         item,
@@ -240,10 +240,20 @@ def convert_from_manifest(
     LOGGER.info("Starting conversion for manifest %s", manifest_path)
     LOGGER.info("Converting %d item(s) in %s", len(items), resolved_output_dir)
 
-    converted_items = [
-        _convert_single_item(item, resolved_output_dir, effective_config)
-        for item in items
-    ]
+    configured_workers = int(conversion_cfg.get("max_workers") or 0)
+    if configured_workers <= 0:
+        configured_workers = os.cpu_count() or 1
+
+    worker_count = min(configured_workers, max(len(items), 1))
+    LOGGER.info("Using %d conversion worker(s)", worker_count)
+
+    with ThreadPoolExecutor(max_workers=worker_count) as executor:
+        converted_items = list(
+            executor.map(
+                lambda item: _convert_single_item(item, resolved_output_dir, effective_config),
+                items,
+            )
+        )
 
     converted_count = sum(1 for item in converted_items if item.status == "converted")
     LOGGER.info(
