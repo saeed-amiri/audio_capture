@@ -27,6 +27,7 @@ All containers mount config read-only at /app/config and use CONFIG_FILE=/app/co
 - docker/worker-discovery/Dockerfile
 - docker/worker-download/Dockerfile
 - docker/worker-convert/Dockerfile
+- docker/worker-metadata/Dockerfile
 - docker/worker-telegram-prep/Dockerfile
 - docker/worker-transcript/Dockerfile
 
@@ -39,6 +40,7 @@ All containers mount config read-only at /app/config and use CONFIG_FILE=/app/co
 - apps/worker-convert
 - apps/worker-telegram-prep
 - apps/worker-transcript
+- apps/worker-metadata
 
 ## Data
 
@@ -58,3 +60,13 @@ The transcript worker tries to collect subtitle/transcript artifacts for each it
 
 - data/jobs/<job_id>/items/<item_folder>/meta/subtitles.<lang>.vtt
 - data/jobs/<job_id>/items/<item_folder>/meta/transcript.txt
+
+## Metadata Worker Scope
+
+The metadata worker reads `conversion_manifest.json` and tags each converted audio file (ID3 tags plus cover art) with FFmpeg. It uses one manifest as the source of truth:
+
+- data/jobs/metadata_manifest.json: rewritten on every run, reviewed/edited by the user, then re-read and applied
+- data/jobs/<item_folder>/<output_name>: tagged file (default `Title-Artist.mp3`); the source file is kept
+- data/jobs/<item_folder>/metadata_manifest.json: copy of the reviewed entry, written after tagging
+
+The compose service mounts `${HOME}/Musik` read-only at the same path so cover images stored there are visible inside the container.

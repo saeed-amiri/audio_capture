@@ -442,6 +442,12 @@ def apply_metadata_to_file(manifest: dict[str, Any]) -> dict[str, Any]:
     return manifest
 
 
+def copy_manifest_to_target_dir(manifest: dict[str, Any]) -> Path:
+    path = resolve_output_path(manifest).parent / "metadata_manifest.json"
+    path.write_text(json.dumps(manifest, ensure_ascii=False, indent=2), encoding="utf-8")
+    return path
+
+
 def read_conversion_manifest(manifest_path: Path) -> list[dict[str, Any]]:
     with manifest_path.open("r", encoding="utf-8") as handle:
         payload = json.load(handle)
@@ -485,4 +491,5 @@ def metadata_from_conversion_manifest(
 
     for manifest in manifests:
         apply_metadata_to_file(manifest)
+        copy_manifest_to_target_dir(manifest)
     return manifests

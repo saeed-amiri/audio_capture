@@ -1,7 +1,7 @@
 # audio_capture
 
-Pipeline for discovering, downloading, converting, transcribing, and preparing
-YouTube audio for Telegram delivery. Each stage is an independent worker that
+Pipeline for discovering, downloading, converting, transcribing, tagging, and
+preparing YouTube audio for Telegram delivery. Each stage is an independent worker that
 reads/writes JSON files under `data/jobs/` and shares configuration from
 `config/settings.yaml`.
 
@@ -180,6 +180,82 @@ Override the output manifest with `--manifest-output /app/data/jobs/my_transcrip
 docker compose run --rm worker-transcript /app/data/jobs/conversion_manifest.json
 ```
 
+## worker-metadata
+
+Reads a conversion manifest and writes ID3 tags and cover art into each item's
+converted audio file with FFmpeg.
+
+For every item it builds a metadata entry from the tags already in the audio
+file, the item title and source URL, and the first cover image found in the
+item folder (`.webp`, `.png`, `.jpg`, `.jpeg`). All entries are written to a
+single `<output-dir>/metadata_manifest.json`, which is **rewritten from scratch
+on every run** (it is never appended to).
+
+Each item has:
+
+- `metadata`: tags to embed (`title`, `artist`, `album_artist`, `album`, `genre`,
+  `date`, `language`, `narrator`, `comment`, `source`, `url`, ... and `cover_path`)
+- `output_name`: file name of the tagged file, default `Title-Artist.mp3` with
+  spaces replaced by underscores. If you leave it at the default, it follows
+  your edited `title`/`artist`; if you change it, your name is used as written.
+  Paths are stripped, and a missing extension is added.
+
+By default the worker pauses after writing the manifest so you can review it:
+
+```text
+Apply metadata now? [Y/n/e]:
+```
+
+- Enter or `y`: apply the metadata
+- `n`: skip (nothing is changed)
+- `e`: open the manifest in `$EDITOR` (default `nano`), then confirm
+
+The manifest is re-read after review, so your edits are what gets applied. If
+the edited file is not valid JSON, the run stops and nothing is applied.
+
+The tagged file is written next to the source under `output_name`; the source
+file is kept unless `output_name` equals its name. After tagging, the reviewed
+entry is also copied into that folder as `metadata_manifest.json`. Covers that
+are not JPEG/PNG (for example WebP) are converted to JPEG first, because MP3
+attached pictures need a known image type.
+
+Source: [apps/worker-metadata](apps/worker-metadata)
+
+### Run with Docker directly
+
+```bash
+docker build -f docker/worker-metadata/Dockerfile -t audio-capture-metadata .
+
+docker run --rm -it \
+  -v "$(pwd)/data:/app/data" \
+  -v "$(pwd)/config:/app/config:ro" \
+  -e CONFIG_FILE=/app/config/settings.yaml \
+  audio-capture-metadata \
+  python /app/apps/worker-metadata/main.py /app/data/jobs/conversion_manifest.json
+```
+
+Pass `--output-dir /app/data/jobs` to point at a different jobs directory.
+Pass `--no-prompt` to skip the review step and apply immediately (for
+automation; run without `-it`).
+
+### Run with Docker Compose
+
+```bash
+docker compose run --rm -it worker-metadata /app/data/jobs/conversion_manifest.json
+```
+
+Use `-it` so the review prompt can read your input. For unattended runs:
+
+```bash
+docker compose run --rm worker-metadata /app/data/jobs/conversion_manifest.json --no-prompt
+```
+
+FFmpeg runs inside the container, so a `cover_path` outside `data/` must be
+mounted. The compose service mounts `${HOME}/Musik` read-only at the same path;
+add another volume to `worker-metadata` in `docker-compose.yml` for other
+folders. Rebuild the image after code changes:
+`docker compose build worker-metadata`.
+
 ## Typical end-to-end flow
 
 ```bash
@@ -187,6 +263,7 @@ docker compose run --rm worker-discovery "https://www.youtube.com/watch?v=VIDEO_
 docker compose run --rm worker-download /app/data/jobs/discovery_manifest.json
 docker compose run --rm worker-convert /app/data/jobs/discovery_manifest.json
 docker compose run --rm worker-transcript /app/data/jobs/conversion_manifest.json
+docker compose run --rm -it worker-metadata /app/data/jobs/conversion_manifest.json
 ```
 
 ## Local development (without Docker)
@@ -197,6 +274,7 @@ uv run python apps/worker-discovery/main.py "https://www.youtube.com/watch?v=VID
 uv run python apps/worker-download/main.py data/jobs/discovery_manifest.json
 uv run python apps/worker-convert/main.py data/jobs/conversion_manifest.json
 uv run python apps/worker-transcript/main.py data/jobs/conversion_manifest.json
+uv run python apps/worker-metadata/main.py data/jobs/conversion_manifest.json
 uv run pytest -q tests/
 uv run ruff check .
 ```

@@ -171,6 +171,29 @@ class MetadataWorkerTests(unittest.TestCase):
             self.assertEqual(converted.suffix.lower(), ".jpg")
             self.assertTrue(converted.exists())
 
+    def test_reviewed_manifest_is_copied_into_each_target_dir(self):
+        with tempfile.TemporaryDirectory() as tmpdir:
+            output_dir = Path(tmpdir)
+            conversion = self._write_conversion(output_dir, ["a", "b"])
+
+            def fake_review(manifest_path, **kwargs):
+                data = json.loads(Path(manifest_path).read_text(encoding="utf-8"))
+                data["items"][0]["metadata"]["artist"] = "Edited Artist"
+                Path(manifest_path).write_text(json.dumps(data), encoding="utf-8")
+                return True
+
+            with unittest.mock.patch.object(metadata, "review_metadata_manifest", fake_review), \
+                    unittest.mock.patch.object(metadata, "apply_metadata_to_file", lambda m: m):
+                metadata.metadata_from_conversion_manifest(
+                    conversion, output_dir=output_dir, config={}, interactive=True
+                )
+
+            copy_a = json.loads((output_dir / "a" / "metadata_manifest.json").read_text(encoding="utf-8"))
+            copy_b = json.loads((output_dir / "b" / "metadata_manifest.json").read_text(encoding="utf-8"))
+            self.assertEqual(copy_a["metadata"]["artist"], "Edited Artist")
+            self.assertEqual(copy_a["folder_name"], "a")
+            self.assertEqual(copy_b["folder_name"], "b")
+
     def test_default_output_name_is_title_dash_artist_with_underscores(self):
         name = metadata.default_output_name(
             {"title": "Winterwende", "artist": "Elisabeth Langgasser"}, Path("/x/source.mp3")
