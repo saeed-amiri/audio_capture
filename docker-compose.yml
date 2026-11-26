@@ -85,3 +85,15 @@ services:
       - ./data:/app/data:rw
       - ./config:/app/config:ro
     entrypoint: ["python", "/app/apps/worker-transcript/main.py"]
+
+  worker-metadata:
+    build:
+      context: .
+      dockerfile: docker/worker-metadata/Dockerfile
+    container_name: audio-capture-worker-metadata
+    environment:
+      - CONFIG_FILE=/app/config/settings.yaml
+    volumes:
+      - ./data:/app/data:rw
+      - ./config:/app/config:ro
+    entrypoint: ["python", "/app/apps/worker-metadata/main.py"]
