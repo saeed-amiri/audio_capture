@@ -48,6 +48,17 @@ transcript:
   fallback_to_auto_subtitles: true
   output_text_file: transcript.txt
 
+metadata:
+  enabled: true
+  update_existing_metadata: true
+  attach_cover_art: true
+  manifest_name: metadata_manifest.json
+  cover_extensions:
+    - .webp
+    - .png
+    - .jpg
+    - .jpeg
+
 telegram:
   enabled: false
   caption_source_order:
