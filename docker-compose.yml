@@ -96,4 +96,5 @@ services:
     volumes:
       - ./data:/app/data:rw
       - ./config:/app/config:ro
+      - ${HOME}/Musik:${HOME}/Musik:ro
     entrypoint: ["python", "/app/apps/worker-metadata/main.py"]
